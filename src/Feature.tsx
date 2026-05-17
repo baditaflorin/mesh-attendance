@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { MeshConfig, YRoom } from "@baditaflorin/mesh-common";
+import { usePerPeerValue, type MeshConfig, type YRoom } from "@baditaflorin/mesh-common";
 
 type Props = { room: YRoom | null; config: MeshConfig };
 
@@ -8,33 +8,6 @@ type Entry = { id: string; name: string; ts: number };
 const NAME_KEY = (prefix: string) => `${prefix}:displayName`;
 
 export function Feature({ room, config }: Props) {
-  const [name, setName] = useState(
-    () => localStorage.getItem(NAME_KEY(config.storagePrefix)) ?? "",
-  );
-  const [, rerender] = useState(0);
-  const [submitted, setSubmitted] = useState(false);
-
-  useEffect(() => {
-    if (name) localStorage.setItem(NAME_KEY(config.storagePrefix), name);
-  }, [name, config.storagePrefix]);
-
-  useEffect(() => {
-    if (!room) return;
-    const entries = room.doc.getMap<Entry>("entries");
-    const onChange = () => rerender((n) => n + 1);
-    entries.observe(onChange);
-    return () => entries.unobserve(onChange);
-  }, [room]);
-
-  const entries = useMemo(() => {
-    if (!room) return [] as Entry[];
-    const m = room.doc.getMap<Entry>("entries");
-    const arr: Entry[] = [];
-    m.forEach((v) => arr.push(v));
-    arr.sort((a, b) => a.ts - b.ts);
-    return arr;
-  }, [room]);
-
   if (!room) {
     return (
       <div className="att-screen">
@@ -43,13 +16,37 @@ export function Feature({ room, config }: Props) {
       </div>
     );
   }
+  return <Body room={room} config={config} />;
+}
 
-  const myEntry = room.doc.getMap<Entry>("entries").get(room.peerId);
+function Body({ room, config }: { room: YRoom; config: MeshConfig }) {
+  const [name, setName] = useState(
+    () => localStorage.getItem(NAME_KEY(config.storagePrefix)) ?? "",
+  );
+  const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (name) localStorage.setItem(NAME_KEY(config.storagePrefix), name);
+  }, [name, config.storagePrefix]);
+
+  const peerEntries = usePerPeerValue<Entry>(room, "entries", {
+    id: "",
+    name: "",
+    ts: 0,
+  });
+
+  const entries = useMemo(() => {
+    const arr = peerEntries.entries.map(([, v]) => v);
+    arr.sort((a, b) => a.ts - b.ts);
+    return arr;
+  }, [peerEntries.entries]);
+
+  const myEntry = peerEntries.valueOf(room.peerId);
 
   const checkIn = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    room.doc.getMap<Entry>("entries").set(room.peerId, {
+    peerEntries.setMy({
       id: room.peerId,
       name: trimmed,
       ts: Date.now(),
@@ -58,7 +55,7 @@ export function Feature({ room, config }: Props) {
   };
 
   const remove = () => {
-    room.doc.getMap<Entry>("entries").delete(room.peerId);
+    peerEntries.clearMy();
     setSubmitted(false);
   };
 
@@ -76,6 +73,8 @@ export function Feature({ room, config }: Props) {
     URL.revokeObjectURL(url);
   };
 
+  const hasMyEntry = !!myEntry;
+
   return (
     <div className="att-screen">
       <header className="att-header">
@@ -85,7 +84,7 @@ export function Feature({ room, config }: Props) {
         </p>
       </header>
 
-      {!myEntry || !submitted ? (
+      {!hasMyEntry || !submitted ? (
         <form
           className="att-form"
           onSubmit={(e) => {
@@ -107,8 +106,8 @@ export function Feature({ room, config }: Props) {
       ) : (
         <div className="att-confirmed">
           <p>
-            ✓ checked in as <strong>{myEntry.name}</strong> at{" "}
-            {new Date(myEntry.ts).toLocaleTimeString()}
+            ✓ checked in as <strong>{myEntry!.name}</strong> at{" "}
+            {new Date(myEntry!.ts).toLocaleTimeString()}
           </p>
           <button type="button" className="att-undo" onClick={remove}>
             undo
