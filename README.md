@@ -1,7 +1,7 @@
 # mesh-attendance
 
 [![pages](https://img.shields.io/badge/live-baditaflorin.github.io%2Fmesh-attendance-4a90e2)](https://baditaflorin.github.io/mesh-attendance/)
-[![version](https://img.shields.io/badge/version-0.1.0-blue)](https://github.com/baditaflorin/mesh-attendance/blob/main/package.json)
+[![version](https://img.shields.io/badge/version-0.1.1-blue)](https://github.com/baditaflorin/mesh-attendance/blob/main/package.json)
 [![license](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 
 > Instant class/meeting roll-call via QR — CSV export, no Google Forms
