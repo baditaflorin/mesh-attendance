@@ -18,6 +18,14 @@ Tip the dev: **https://www.paypal.com/paypalme/florinbadita**
 
 Peer-to-peer browser app, no backend of its own beyond the self-hosted WebRTC stack listed below. Built on `@baditaflorin/mesh-common`, hosted on GitHub Pages from `docs/`.
 
+Instant roll-call with no sign-up: open the room, share its invite QR (the 📡 button), and everyone who joins types their name and taps **check in**. The roster syncs live across every device in the room, and the organiser can export it to CSV. The QR is the _room invite_ — there's no per-person scanning; once you're in the room, you just check in.
+
+## How to use it
+
+**Try it in 30 seconds:** open the live URL (**https://baditaflorin.github.io/mesh-attendance/**) in two browser tabs, type a different name in each, and tap **check in**. Both rosters update live; tap **export CSV** to download the list.
+
+In a real room: open the live URL, tap the 📡 invite button (top-right) and let everyone scan the QR to join the same room. Each person checks in with their name; you export the CSV when you're done.
+
 ## Quickstart (local)
 
 ```bash

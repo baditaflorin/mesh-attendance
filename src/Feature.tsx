@@ -84,6 +84,13 @@ function Body({ room, config }: { room: YRoom; config: MeshConfig }) {
         </p>
       </header>
 
+      <p className="att-help">
+        Share the room with the 📡 invite button (top-right) — anyone who scans it lands in this
+        roll-call. Everyone types their name and taps check in; the roster syncs live, and you can
+        export it to CSV. <strong>Try it:</strong> open this page in two tabs and check in from
+        each.
+      </p>
+
       {!hasMyEntry || !submitted ? (
         <form
           className="att-form"
@@ -115,14 +122,18 @@ function Body({ room, config }: { room: YRoom; config: MeshConfig }) {
         </div>
       )}
 
-      <ul className="att-list">
-        {entries.map((e) => (
-          <li key={e.id} className={`att-entry ${e.id === room.peerId ? "is-me" : ""}`}>
-            <span className="att-name">{e.name}</span>
-            <span className="att-time">{new Date(e.ts).toLocaleTimeString()}</span>
-          </li>
-        ))}
-      </ul>
+      {entries.length === 0 ? (
+        <p className="att-empty">no one's checked in yet</p>
+      ) : (
+        <ul className="att-list">
+          {entries.map((e) => (
+            <li key={e.id} className={`att-entry ${e.id === room.peerId ? "is-me" : ""}`}>
+              <span className="att-name">{e.name}</span>
+              <span className="att-time">{new Date(e.ts).toLocaleTimeString()}</span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <button
         type="button"
