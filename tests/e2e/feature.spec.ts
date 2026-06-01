@@ -18,9 +18,14 @@ test("peer B's check-in updates peer A's roster + count, and the CSV carries the
 }) => {
   const { a, b, cleanup } = await openTwoPeers(browser, baseURL ?? "", { storagePrefix });
   try {
-    // Before anyone checks in, both rosters are empty and the count is zero.
+    // In-app help explains the room-invite + check-in flow for newcomers.
+    await expect(a.locator(".att-help")).toContainText("check in");
+
+    // Before anyone checks in, both rosters are empty (explicit empty state)
+    // and the count is zero.
     await expect(a.locator(".att-status")).toContainText("0 checked in");
     await expect(a.locator(".att-list .att-entry")).toHaveCount(0);
+    await expect(a.locator(".att-empty")).toBeVisible();
 
     // Peer B checks in. This writes to the shared Yjs per-peer map.
     await b.getByPlaceholder("your name").fill("bob");
@@ -28,8 +33,9 @@ test("peer B's check-in updates peer A's roster + count, and the CSV carries the
     await expect(b.locator(".att-confirmed")).toContainText("bob");
 
     // ASSERT CROSS-PEER: peer A — who never touched the form — sees bob on the
-    // roster and the count tick to 1.
+    // roster, the empty state clears, and the count ticks to 1.
     await expect(a.locator(".att-status")).toContainText("1 checked in");
+    await expect(a.locator(".att-empty")).toHaveCount(0);
     await expect(a.locator(".att-list .att-name")).toHaveText(["bob"]);
 
     // Peer A also checks in, so the export covers both.

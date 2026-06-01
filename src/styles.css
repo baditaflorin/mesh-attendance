@@ -44,6 +44,25 @@ body,
   color: var(--mesh-muted);
 }
 
+.att-help {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--mesh-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 2px solid var(--mesh-accent);
+  border-radius: 0.3rem;
+}
+
+.att-empty {
+  margin: 0;
+  text-align: center;
+  color: var(--mesh-muted);
+  font-size: 0.9rem;
+  padding: 0.5rem;
+}
+
 .att-form {
   display: flex;
   flex-direction: column;
