@@ -1,7 +1,8 @@
 {
   "schemaVersion": 1,
   "app": "mesh-attendance",
-  "sourceCommit": "82189738918e28be6821a630409ce15f914650f5",
-  "releaseCommit": "82189738918e28be6821a630409ce15f914650f5",
-  "recordedAt": "2026-08-26T05:02:10Z"
+  "sourceCommit": "bb7c9f1c3fc6c52cacc9fe0a2b82401fd229d155",
+  "releaseCommit": "bb7c9f1c3fc6c52cacc9fe0a2b82401fd229d155",
+  "meshCommonCommit": "025f7ff72e50c4b54a3f4a2d8c88f4f600dec78f",
+  "recordedAt": "2026-08-26T16:27:51Z"
 }
