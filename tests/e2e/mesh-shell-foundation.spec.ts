@@ -36,8 +36,11 @@ test("MeshShell provides the UX foundation without a third-party network probe",
     .toMatch(/^#[\da-f]{3,8}$/i);
 
   const settings = page.getByRole("dialog", { name: "Settings" });
-  if (!(await settings.isVisible())) {
-    await page.getByRole("button", { name: "Open settings" }).click();
+  if (!(await settings.isVisible().catch(() => false))) {
+    const settingsFab = shell.locator(".mesh-settings-fab");
+    await expect(settingsFab).toBeVisible();
+    await expect(settingsFab).toBeEnabled();
+    await settingsFab.click();
   }
   await expect(settings).toBeVisible();
 

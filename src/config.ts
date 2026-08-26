@@ -2,8 +2,11 @@ import { createMeshConfig } from "@baditaflorin/mesh-common";
 
 export const config = createMeshConfig({
   appName: "mesh-attendance",
-  description: "Instant class/meeting roll-call via QR — CSV export, no Google Forms",
-  accentHex: "#4a90e2",
+  displayName: "Field Check-in",
+  visualProfile: "field",
+  shellLayout: "inset",
+  description: "A private, peer-to-peer check-in ledger for the people sharing a room.",
+  accentHex: "#d7ab57",
   version: __APP_VERSION__,
   commit: __GIT_COMMIT__,
 });

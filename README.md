@@ -1,74 +1,74 @@
-# mesh-attendance
+# Field Check-in
 
-[![pages](https://img.shields.io/badge/live-baditaflorin.github.io%2Fmesh-attendance-4a90e2)](https://baditaflorin.github.io/mesh-attendance/)
-[![version](https://img.shields.io/badge/version-0.1.1-blue)](https://github.com/baditaflorin/mesh-attendance/blob/main/package.json)
+[![pages](https://img.shields.io/badge/live-baditaflorin.github.io%2Fmesh--attendance-d7ab57)](https://baditaflorin.github.io/mesh-attendance/)
+[![version](https://img.shields.io/badge/version-0.1.1-58664b)](https://github.com/baditaflorin/mesh-attendance/blob/main/package.json)
 [![license](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 
-> Instant class/meeting roll-call via QR — CSV export, no Google Forms
+> A private, peer-to-peer check-in ledger for the people sharing a room.
 
 Live: **https://baditaflorin.github.io/mesh-attendance/**
 
-Source: **https://github.com/baditaflorin/mesh-attendance**
+## What it does
 
-Tip the dev: **https://www.paypal.com/paypalme/florinbadita**
+Field Check-in is a deliberately small shared roll-call workspace. Open a room, share its invite, and each participant enters the name they want displayed before pressing **Check in**. The roster syncs directly across the connected browsers; exporting it produces a CSV download in the browser that requested it.
 
----
+It is not an identity-verification system. “Live devices” is the number of active room connections, and a check-in is simply the name a participant chose to share with that room.
 
-## What it is
+## Use it
 
-Peer-to-peer browser app, no backend of its own beyond the self-hosted WebRTC stack listed below. Built on `@baditaflorin/mesh-common`, hosted on GitHub Pages from `docs/`.
+1. Open the [live app](https://baditaflorin.github.io/mesh-attendance/).
+2. Use **Invite** in the product bar to bring another device into the same room.
+3. Each person enters a name and selects **Check in**.
+4. Export the current roster when needed. The CSV is a local download; it is not uploaded by the app.
 
-Instant roll-call with no sign-up: open the room, share its invite QR (the 📡 button), and everyone who joins types their name and taps **check in**. The roster syncs live across every device in the room, and the organiser can export it to CSV. The QR is the _room invite_ — there's no per-person scanning; once you're in the room, you just check in.
+For a quick two-device check, open the app in two browser tabs, join the same room, and enter a different name in each tab.
 
-## How to use it
+## Local development
 
-**Try it in 30 seconds:** open the live URL (**https://baditaflorin.github.io/mesh-attendance/**) in two browser tabs, type a different name in each, and tap **check in**. Both rosters update live; tap **export CSV** to download the list.
-
-In a real room: open the live URL, tap the 📡 invite button (top-right) and let everyone scan the QR to join the same room. Each person checks in with their name; you export the CSV when you're done.
-
-## Quickstart (local)
+`mesh-common` must be a sibling directory because this app consumes it through `file:../mesh-common`.
 
 ```bash
 git clone https://github.com/baditaflorin/mesh-common
 git clone https://github.com/baditaflorin/mesh-attendance
 cd mesh-attendance
-npm install
+npm ci
 npm run dev
 ```
 
-`mesh-common` must sit as a **sibling** directory because `package.json` references it via `file:../mesh-common`.
+## Validation
+
+```bash
+npm run fmt:check
+npm run typecheck
+npm run test
+npm run smoke
+npm run screenshot
+npm run demo
+npm run audit:security
+```
+
+The long-running cleanup check is opt-in:
+
+```bash
+MESH_LEAK_DURATION_MS=5000 MESH_LEAK_NOISE_OPS=30 npm run test:leak
+```
 
 ## Self-hosted infrastructure
 
-| Repo                                              | Endpoint                               | Purpose                     |
-| ------------------------------------------------- | -------------------------------------- | --------------------------- |
-| https://github.com/baditaflorin/signaling-server  | `wss://turn.0docker.com/ws`            | y-webrtc signaling fan-out  |
-| https://github.com/baditaflorin/turn-token-server | `https://turn.0docker.com/credentials` | HMAC TURN creds, 1-hour TTL |
-| https://github.com/baditaflorin/coturn-hetzner    | `turn:turn.0docker.com:3479`           | TURN relay                  |
+| Service          | Endpoint                               | Purpose                     |
+| ---------------- | -------------------------------------- | --------------------------- |
+| Signaling        | `wss://turn.0docker.com/ws`            | y-webrtc signaling fan-out  |
+| TURN credentials | `https://turn.0docker.com/credentials` | Ephemeral relay credentials |
+| TURN relay       | `turn:turn.0docker.com:3479`           | WebRTC fallback relay       |
 
-## Settings overrides (localStorage keys)
+The Settings panel can override signaling and TURN endpoints locally. The relevant keys are `mesh-attendance:signalingUrl`, `mesh-attendance:turnTokenUrl`, `mesh-attendance:iceServers`, and `mesh-attendance:room`.
 
-The settings drawer lets the user override signaling and TURN endpoints. Keys:
+## Deployment and privacy
 
-- `mesh-attendance:signalingUrl`
-- `mesh-attendance:turnTokenUrl`
-- `mesh-attendance:iceServers`
-- `mesh-attendance:room`
+GitHub Pages serves the committed `docs/` directory from `main`. Validation runs on self-hosted Woodpecker CI; this repository intentionally has no GitHub Actions workflow.
 
-If endpoints are blank or unreachable, the app falls back to STUN-only.
-
-## Build & deploy
-
-GitHub Pages serves the committed `docs/` directory on the `main` branch. There is **no GitHub Actions build workflow**; the Husky pre-commit + pre-push hooks gate formatting / typecheck / smoke build locally.
-
-```bash
-npm run smoke   # build + sanity-check docs/
-```
-
-## Privacy
-
-See `docs/privacy.md` for the threat model — what other peers in the mesh see, what the self-hosted infra sees, what stays local.
+See [docs/privacy.md](docs/privacy.md) for the threat model and the distinction between room-visible data and local browser data.
 
 ## License
 
-MIT — see `LICENSE`.
+MIT — see [LICENSE](LICENSE).

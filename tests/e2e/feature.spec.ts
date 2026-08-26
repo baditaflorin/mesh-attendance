@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import { openTwoPeers } from "@baditaflorin/mesh-common/testing";
 import { readFileSync } from "node:fs";
 
@@ -7,64 +7,78 @@ const pkg = JSON.parse(readFileSync(new URL("../../package.json", import.meta.ur
 };
 const storagePrefix = pkg.name;
 
-// The ADVERTISED core action: "Instant class/meeting roll-call via QR — CSV
-// export". Two peers join the same room (the QR invite link is what gets two
-// peers into one room; here openTwoPeers stands in for the scanned room link).
-// Peer B checks in -> peer A's live roster AND count must update. Then the CSV
-// export on peer A must actually contain BOTH checked-in names.
-test("peer B's check-in updates peer A's roster + count, and the CSV carries the names", async ({
+async function closeInitiallyOpenSettings(page: Page): Promise<void> {
+  const settings = page.getByRole("dialog", { name: "Settings" });
+  if (!(await settings.isVisible().catch(() => false))) return;
+  const close = settings.getByRole("button", { name: "close" });
+  if (await close.isVisible().catch(() => false)) {
+    await close.click();
+  } else {
+    await page.keyboard.press("Escape");
+  }
+  await expect(settings).toBeHidden();
+}
+
+test("two peers share a live check-in roster and the actual exported CSV", async ({
   browser,
   baseURL,
 }) => {
   const { a, b, cleanup } = await openTwoPeers(browser, baseURL ?? "", { storagePrefix });
   try {
-    // In-app help explains the room-invite + check-in flow for newcomers.
-    await expect(a.locator(".att-help")).toContainText("check in");
+    await Promise.all([closeInitiallyOpenSettings(a), closeInitiallyOpenSettings(b)]);
+    await expect(a.getByRole("heading", { name: "Field Check-in" })).toBeVisible();
+    await expect(a.getByText("0 checked in", { exact: true })).toBeVisible();
 
-    // Before anyone checks in, both rosters are empty (explicit empty state)
-    // and the count is zero.
-    await expect(a.locator(".att-status")).toContainText("0 checked in");
-    await expect(a.locator(".att-list .att-entry")).toHaveCount(0);
-    await expect(a.locator(".att-empty")).toBeVisible();
+    await a.getByLabel("Your name").fill("Avery");
+    await a.getByRole("button", { name: "Check in", exact: true }).click();
+    await expect(a.getByText("You’re checked in", { exact: true })).toBeVisible();
 
-    // Peer B checks in. This writes to the shared Yjs per-peer map.
-    await b.getByPlaceholder("your name").fill("bob");
-    await b.getByRole("button", { name: /check in/ }).click();
-    await expect(b.locator(".att-confirmed")).toContainText("bob");
+    const bRoster = b.getByRole("list", { name: "Checked-in people" });
+    await expect(bRoster.getByText("Avery", { exact: true })).toBeVisible();
+    await expect(b.getByText("1 checked in", { exact: true })).toBeVisible();
 
-    // ASSERT CROSS-PEER: peer A — who never touched the form — sees bob on the
-    // roster, the empty state clears, and the count ticks to 1.
-    await expect(a.locator(".att-status")).toContainText("1 checked in");
-    await expect(a.locator(".att-empty")).toHaveCount(0);
-    await expect(a.locator(".att-list .att-name")).toHaveText(["bob"]);
+    await b.getByLabel("Your name").fill("Riley");
+    await b.getByRole("button", { name: "Check in", exact: true }).click();
 
-    // Peer A also checks in, so the export covers both.
-    await a.getByPlaceholder("your name").fill("alice");
-    await a.getByRole("button", { name: /check in/ }).click();
-    await expect(a.locator(".att-status")).toContainText("2 checked in");
-    // Roster on A now carries both names (order is check-in time: bob then alice).
-    await expect(a.locator(".att-list .att-name")).toHaveText(["bob", "alice"]);
-    // And the same roster propagated back to B.
-    await expect(b.locator(".att-list .att-name")).toHaveText(["bob", "alice"]);
+    const aRoster = a.getByRole("list", { name: "Checked-in people" });
+    await expect(aRoster).toContainText("Avery");
+    await expect(aRoster).toContainText("Riley");
+    await expect(a.getByText("2 checked in", { exact: true })).toBeVisible();
+    await expect(b.getByText("2 checked in", { exact: true })).toBeVisible();
 
-    // ASSERT CSV CONTENT: trigger the export on peer A and read the actual
-    // downloaded file — it must contain both checked-in names + the CSV header.
     const downloadPromise = a.waitForEvent("download");
-    await a.getByRole("button", { name: /export CSV/ }).click();
+    await a.getByRole("button", { name: "Export roster CSV", exact: true }).click();
     const download = await downloadPromise;
     const path = await download.path();
     expect(path).toBeTruthy();
     const csv = readFileSync(path!, "utf8");
     expect(csv).toContain("timestamp_iso,name,peer_id");
-    expect(csv).toContain('"bob"');
-    expect(csv).toContain('"alice"');
-    // Two data rows (header + 2 entries + trailing newline).
-    const dataRows = csv
-      .trim()
-      .split("\n")
-      .filter((l) => l && !l.startsWith("timestamp_iso"));
-    expect(dataRows).toHaveLength(2);
+    expect(csv).toContain('"Avery"');
+    expect(csv).toContain('"Riley"');
+    expect(
+      csv
+        .trim()
+        .split("\n")
+        .filter((line) => line && !line.startsWith("timestamp_iso")),
+    ).toHaveLength(2);
   } finally {
     await cleanup();
   }
+});
+
+test("the primary name flow is labeled, keyboard-submittable, and announces confirmation", async ({
+  page,
+}) => {
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await closeInitiallyOpenSettings(page);
+
+  const name = page.getByLabel("Your name");
+  await expect(name).toHaveAttribute("maxlength", "48");
+  await name.fill("Jordan");
+  await name.press("Enter");
+
+  await expect(page.locator(".att-confirmed")).toContainText("You’re checked in");
+  await expect(page.locator(".att-confirmed")).toContainText("Jordan");
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Remove", exact: true })).toBeVisible();
 });
