@@ -29,6 +29,16 @@ test("two peers share a live check-in roster and the actual exported CSV", async
     await expect(a.getByRole("heading", { name: "Field Check-in" })).toBeVisible();
     await expect(a.getByText("0 checked in", { exact: true })).toBeVisible();
 
+    // `openTwoPeers` uses the same-browser BroadcastChannel route. This is the
+    // path that used to merge roster entries while leaving each device at "1
+    // device live". The shared core now exposes that peer discovery, so the
+    // live count must agree with the actual two-peer room before either person
+    // checks in.
+    await expect(a.getByText("2 devices live", { exact: true })).toBeVisible();
+    await expect(b.getByText("2 devices live", { exact: true })).toBeVisible();
+    await expect(a.getByText("1 device live", { exact: true })).toHaveCount(0);
+    await expect(b.getByText("1 device live", { exact: true })).toHaveCount(0);
+
     await a.getByLabel("Your name").fill("Avery");
     await a.getByRole("button", { name: "Check in", exact: true }).click();
     await expect(a.getByText("You’re checked in", { exact: true })).toBeVisible();

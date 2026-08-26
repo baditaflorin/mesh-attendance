@@ -12,7 +12,7 @@ Live: **https://baditaflorin.github.io/mesh-attendance/**
 
 Field Check-in is a deliberately small shared roll-call workspace. Open a room, share its invite, and each participant enters the name they want displayed before pressing **Check in**. The roster syncs directly across the connected browsers; exporting it produces a CSV download in the browser that requested it.
 
-It is not an identity-verification system. “Live devices” is the number of active room connections, and a check-in is simply the name a participant chose to share with that room.
+It is not an identity-verification system. “Live devices” is the number of active room connections, including people joined through the same-browser peer route, and a check-in is simply the name a participant chose to share with that room.
 
 ## Use it
 
