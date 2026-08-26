@@ -1,49 +1,83 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { captureConsoleErrors } from "@baditaflorin/mesh-common/testing";
 
-/**
- * Generic smoke test — works for any mesh-* app without modification.
- * Asserts: page loads, settings drawer opens, self-ref bar visible, no
- * console errors.
- */
+function settingsDialog(page: Page): Locator {
+  return page.getByRole("dialog", { name: "Settings" });
+}
 
-test("page loads with version + source + tip visible", async ({ page }) => {
-  const c = captureConsoleErrors(page);
-  await page.goto("./");
+async function isVisible(locator: Locator): Promise<boolean> {
+  return locator.isVisible().catch(() => false);
+}
 
-  // Self-ref bar contains a "source" link, a "tip" link, and a version stamp.
-  await expect(page.getByRole("link", { name: /source/i }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: /tip/i }).first()).toBeVisible();
-  // Version stamp lives in the self-ref bar — mesh-common's class is
-  // `.mesh-self-ref`, legacy apps use `.self-ref`. Both render a `vN.N.N`
-  // string in that footer.
-  const versionLocator = page.locator(".mesh-self-ref, .self-ref").getByText(/^v\d/);
-  await expect(versionLocator.first()).toBeVisible();
+async function readyShell(page: Page): Promise<Locator> {
+  const shell = page.locator("[data-mesh-app-shell]").first();
+  await expect(shell).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.style.getPropertyValue("--mesh-accent").trim()),
+    )
+    .toMatch(/^#[\da-f]{3,8}$/i);
+  return shell;
+}
 
-  // Allow a moment for async TURN fetch / WebRTC handshake; benign warnings
-  // about TURN unreachable are OK, but real errors are not.
-  await page.waitForTimeout(800);
-  const errors = c.getErrors().filter((e) => {
-    // Ignore network failures that come from the intentionally-unreachable
-    // signaling URL in the test environment.
-    return !/turn|stun|signaling|websocket|webrtc|failed to load resource|err_failed|err_connection|err_blocked|err_name_not_resolved/i.test(
-      e,
-    );
-  });
-  expect(errors, errors.join("\n")).toHaveLength(0);
-});
+async function closeInitiallyOpenSettings(page: Page): Promise<void> {
+  const dialog = settingsDialog(page);
+  if (!(await isVisible(dialog))) return;
+  const close = dialog.getByRole("button", { name: "close" });
+  if (await isVisible(close)) {
+    await close.click();
+  } else {
+    await page.keyboard.press("Escape");
+  }
+  await expect(dialog).toBeHidden();
+}
 
-test("settings drawer can be opened (or is already open) and shows infra fields", async ({
+async function openSettings(page: Page): Promise<Locator> {
+  const dialog = settingsDialog(page);
+  if (await isVisible(dialog)) return dialog;
+  const shell = await readyShell(page);
+  const trigger = shell.getByRole("button", { name: "Open settings" });
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toBeEnabled();
+  await trigger.click();
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
+test("the professional check-in workspace loads without unexpected console errors", async ({
   page,
 }) => {
-  await page.goto("./");
-  // Some legacy apps auto-open the drawer on first load (e.g. when no name
-  // is set yet). Click the FAB only if the drawer isn't already showing.
-  const drawer = page.locator(".mesh-settings-drawer, .settings-drawer");
-  if ((await drawer.count()) === 0) {
-    await page.getByLabel("Open settings").click();
-  }
-  await expect(page.getByText(/Self-hosted infra/i)).toBeVisible();
-  await expect(page.getByText(/Signaling URL/i)).toBeVisible();
-  await expect(page.getByText(/TURN credentials URL/i)).toBeVisible();
+  const capture = captureConsoleErrors(page);
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  await closeInitiallyOpenSettings(page);
+
+  await readyShell(page);
+  await expect(page.getByRole("heading", { name: "Field Check-in" })).toBeVisible();
+  await expect(page.getByLabel("Your name")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Check in", exact: true })).toBeVisible();
+
+  await page.waitForTimeout(800);
+  const unexpected = capture
+    .getErrors()
+    .filter(
+      (message) =>
+        !/turn|stun|signaling|websocket|webrtc|failed to load resource|err_failed|err_connection|err_blocked|err_name_not_resolved/i.test(
+          message,
+        ),
+    );
+  expect(unexpected, unexpected.join("\n")).toHaveLength(0);
+});
+
+test("settings exposes source, support, version, and the genuine infrastructure fields", async ({
+  page,
+}) => {
+  await page.goto("./", { waitUntil: "domcontentloaded" });
+  const settings = await openSettings(page);
+
+  await expect(settings.getByRole("link", { name: "source" })).toBeVisible();
+  await expect(settings.getByRole("link", { name: "support" })).toBeVisible();
+  await expect(settings.getByText(/^v\d/)).toBeVisible();
+  await expect(settings.getByText(/Self-hosted infra/i)).toBeVisible();
+  await expect(settings.getByText("Signaling URL", { exact: true })).toBeVisible();
+  await expect(settings.getByText("TURN credentials URL", { exact: true })).toBeVisible();
 });
